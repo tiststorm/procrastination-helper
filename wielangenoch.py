@@ -8,6 +8,7 @@ import sys,getopt
 try:
     with open("config.json", "r") as f:
         config = json.load(f)
+        #print(config)
         timetable = config.get("timetable")
 except:
     print("[ERROR] Fehler beim Importieren der Config")
@@ -71,7 +72,15 @@ if debug:
     print("possibleSlots: {}".format(possibleSlots))
 #print(possibleSlots)
 if not possibleSlots:
-    print("Derzeit läuft keine Vorlesung")
+    dist = [dt.datetime.combine(dt.date.today(),x[0])-now for x in filter(lambda x: x[0]>now.time(),timeslots)]
+    if debug:
+        print("dist: {}".format(dist))
+    nextSlot = min(dist) if dist else None
+    if nextSlot:
+        print("Derzeit läuft keine Vorlesung")
+        print("Die nächste Vorlesung beginnt in: {}".format(nextSlot).split(".")[0])
+    else:
+        print("Heute gibt es keine Vorlesung mehr")
 else:
     if len(set(possibleSlots))>1 and not automatic:
         try:
@@ -91,6 +100,6 @@ else:
     print("Du befindest dich im Zeitslot {} - {}".format(*currentSlot))
     print("Bis zum Ende des derzeitigen Zeitslots dauert es noch {}".format(str(deltaToEnd).split(".")[0]))
 
-    printProgressBar(iteration=(100*(1-(deltaToEnd/slotDuration))), total = 100, suffix = "hast du schon überstanden!", prefix = 'Fortschritt', autosize=True)
+    printProgressBar(decimals=2,iteration=(100*(1-(deltaToEnd/slotDuration))), total = 100, suffix = "hast du schon überstanden!", prefix = 'Fortschritt', autosize=True)
 
 

@@ -1,7 +1,28 @@
-from datetime import datetime, time, timedelta
+import datetime as dt	IF
+import sys,getopt
+#order will be respected by -a flag
+timespans = [
+    (9,15,11,45),
+    (11,15,12,45),
+    (14,15,15,45),
+    (19,15,23,45),
+    (0,00,23,59)
+]
+try:
+    opts, args = getopt.getopt(sys.argv[1:], "a")
+except getopt.GetoptError as e:
+    print("[ERROR]"+ str(e))
+    opts = []
 
-#Print iterations progress
-def printProgressBar (iteration, total, prefix = '', suffix = '', decimals = 1, length = 100, fill = '█', printEnd = "\r"):
+#commandline flags
+automatic = False
+for o,a in opts:
+    if o == "-a":
+        #automatic mode doesnt give you a choice if there are multiple timeslots and instead defaults to 0
+        automatic = True
+
+# Print iterations progress
+def printProgressBar (iteration, total, prefix = '', suffix = '', decimals = 1, length = 100, fill = '█', printEnd = "\n"):
     """
     Call in a loop to create terminal progress bar
     @params:
@@ -15,26 +36,50 @@ def printProgressBar (iteration, total, prefix = '', suffix = '', decimals = 1, 
         printEnd    - Optional  : end character (e.g. "\r", "\r\n") (Str)
     """
     percent = ("{0:." + str(decimals) + "f}").format(100 * (iteration / float(total)))
+    #print(percent)
     filledLength = int(length * iteration // total)
+    #print(filledLength)
     bar = fill * filledLength + '-' * (length - filledLength)
-    print('\r%s |%s| %s%% %s' % (prefix, bar, percent, suffix), end = printEnd)
+    #print(bar)
+    print('\r%s|%s| %s%% %s' % (prefix, bar, percent, suffix), end = printEnd)
     # Print New Line on Complete
     if iteration == total:
         print()
 
-times = [(time(a[0][0],a[0][1]),time(a[1][0],a[1][1])) for a in [((9,15),(10,45)),((11,15),(12,45)),((14,15),(15,45)),((0,0),(23,59))]]
-now = datetime.now().time()
-for t in times:
-    if (t[0] < now < t[1]):
-        slot = t
+timeslots = []
+#generate time object pairs if valid timespan was given
+for h1,m1,h2,m2 in timespans:
+    if (h1,m1)<(h2,m2):
+        start = dt.time(h1,m1)
+        end = dt.time(h2,m2)
+        timeslots.append((start, end))
+if timeslots:
+    now = dt.datetime.now()
+    possibleSlots = list(filter(lambda t: t[0]<=now.time()<=t[1], timeslots))
+    #print(possibleSlots)
+    if not possibleSlots:
+        print("Derzeit läuft keine Vorlesung")
     else:
-        slot=None
-if slot:
-    print("Wir befinden uns in Zeitslot {} bis {}".format(str(t[0]),str(t[1])))
-    now = timedelta(hours=now.hour, minutes=now.minute, seconds=now.second)
-    end = timedelta(hours=slot[1].hour, minutes=slot[1].minute, seconds=slot[1].second)
-    dur = end - now
-    print("Bis zum Ende dauert es noch {}".format(dur))
-    printProgressBar(iteration=dur.minutes, total=90, prefix="Fortschritt", length=190)
+        if len(possibleSlots)>1 and not automatic:
+            try:
+                for i,v in enumerate(possibleSlots):
+                    print("{}: {} - {}".format(i,v[0], v[1]))
+                prompt = input("Mehrere mögliche Zeitslots gefunden, wähle einen davon aus (Default=0)\n")
+                index = int(prompt) if prompt else 0
+                currentSlot = possibleSlots[index]
+                print("{}: {} - {} wurde ausgewählt".format(index, *currentSlot))
+            except (IndexError, ValueError):
+                currentSlot = possibleSlots[0]
+                print("[ERROR] Aufgrund eines Fehlers wurde 0: {} - {} standardmäßig ausgewählt".format(*currentSlot))
+        else: currentSlot = possibleSlots[0]
+    slotDuration = dt.datetime.combine(dt.date.today(),currentSlot[1]) - dt.datetime.combine(dt.date.today(),currentSlot[0])
+    deltaToEnd = dt.datetime.combine(dt.date.today(), currentSlot[1]) - now
+
+    print("Du befindest dich im Zeitslot {} - {}".format(*currentSlot))
+    print("Bis zum Ende des derzeitigen Zeitslots dauert es noch {}".format(str(deltaToEnd).split(".")[0]))
+
+    printProgressBar(iteration=(100*(1-(deltaToEnd/slotDuration))), total = 100, suffix = "hast du schon überstanden!", prefix = 'Fortschritt')
 else:
-    print("Du bist nicht in einer Vorlesung")
+    print("[ERROR] Keine validen Zeitspannen gefunden")
+
+

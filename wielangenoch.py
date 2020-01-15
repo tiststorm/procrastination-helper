@@ -52,7 +52,16 @@ def printProgressBar (iteration, total, prefix = '', suffix = '', decimals = 1, 
 #generate time object pairs if valid timespan was given
 now = dt.datetime.now()
 weekday = weekday if weekday!=None else now.weekday()
-timeslots = [((dt.time(h1,m1), dt.time(h2,m2))) for h1,m1,h2,m2 in (timetable["-1"] + timetable[str(weekday)])]
+try:
+    applicableTimeslots = timetable[str(weekday)]
+except KeyError:
+    applicableTimeslots = []
+try:
+    applicableTimeslots += timetable["global"]
+except KeyError:
+    pass
+
+timeslots = [((dt.time(h1,m1), dt.time(h2,m2))) for h1,m1,h2,m2 in (applicableTimeslots)]
 possibleSlots = list(filter(lambda t: t[0]<=now.time()<=t[1], timeslots))
 if debug:
     print("Weekday: {}".format(weekday))
@@ -62,7 +71,7 @@ if debug:
 if not possibleSlots:
     print("Derzeit läuft keine Vorlesung")
 else:
-    if len(possibleSlots)>1 and not automatic:
+    if len(set(possibleSlots))>1 and not automatic:
         try:
             for i,v in enumerate(possibleSlots):
                 print("{}: {} - {}".format(i,v[0], v[1]))

@@ -1,13 +1,17 @@
-import datetime as dt	IF
+import datetime as dt
+import shutil
+import json
 import sys,getopt
-#order will be respected by -a flag
-timespans = [
-    (9,15,11,45),
-    (11,15,12,45),
-    (14,15,15,45),
-    (19,15,23,45),
-    (0,00,23,59)
-]
+
+try:
+    with open("config.json", "r") as f:
+        print("in open")
+        config = json.load(f)
+        timetable = config.get("timetable")
+except:
+    print("[ERROR] Fehler beim Importieren der Config")
+    timetable = []
+
 try:
     opts, args = getopt.getopt(sys.argv[1:], "a")
 except getopt.GetoptError as e:
@@ -21,27 +25,18 @@ for o,a in opts:
         #automatic mode doesnt give you a choice if there are multiple timeslots and instead defaults to 0
         automatic = True
 
-# Print iterations progress
-def printProgressBar (iteration, total, prefix = '', suffix = '', decimals = 1, length = 100, fill = '█', printEnd = "\n"):
+def printProgressBar (iteration, total, prefix = '', suffix = '', decimals = 1, length = 100, fill = '█', autosize = False):
     """
-    Call in a loop to create terminal progress bar
-    @params:
-        iteration   - Required  : current iteration (Int)
-        total       - Required  : total iterations (Int)
-        prefix      - Optional  : prefix string (Str)
-        suffix      - Optional  : suffix string (Str)
-        decimals    - Optional  : positive number of decimals in percent complete (Int)
-        length      - Optional  : character length of bar (Int)
-        fill        - Optional  : bar fill character (Str)
-        printEnd    - Optional  : end character (e.g. "\r", "\r\n") (Str)
+    utilizes this gist: https://gist.github.com/greenstick/b23e475d2bfdc3a82e34eaa1f6781ee4
     """
     percent = ("{0:." + str(decimals) + "f}").format(100 * (iteration / float(total)))
-    #print(percent)
+    styling = '%s |%s| %s%% %s' % (prefix, fill, percent, suffix)
+    if autosize:
+        cols, _ = shutil.get_terminal_size(fallback = (length, 1))
+        length = cols - len(styling)
     filledLength = int(length * iteration // total)
-    #print(filledLength)
     bar = fill * filledLength + '-' * (length - filledLength)
-    #print(bar)
-    print('\r%s|%s| %s%% %s' % (prefix, bar, percent, suffix), end = printEnd)
+    print('\r%s' % styling.replace(fill, bar), end = '\r\n')
     # Print New Line on Complete
     if iteration == total:
         print()
@@ -78,7 +73,7 @@ if timeslots:
     print("Du befindest dich im Zeitslot {} - {}".format(*currentSlot))
     print("Bis zum Ende des derzeitigen Zeitslots dauert es noch {}".format(str(deltaToEnd).split(".")[0]))
 
-    printProgressBar(iteration=(100*(1-(deltaToEnd/slotDuration))), total = 100, suffix = "hast du schon überstanden!", prefix = 'Fortschritt')
+    printProgressBar(iteration=(100*(1-(deltaToEnd/slotDuration))), total = 100, suffix = "hast du schon überstanden!", prefix = 'Fortschritt', autosize=True)
 else:
     print("[ERROR] Keine validen Zeitspannen gefunden")
 
